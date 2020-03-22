@@ -5,6 +5,6 @@ app.listen(3000, () => {
   console.log('running')
 })
 
-app.get('/test', (req, res) => {
-  res.json({ test: 'ok' })
+app.get('/', (req, res) => {
+  res.json({ status: 'ok' })
 })
