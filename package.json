@@ -7,5 +7,8 @@
     "eslint": "^5.16.0",
     "eslint-config-airbnb-base": "^14.1.0",
     "eslint-plugin-import": "^2.20.1"
+  },
+  "dependencies": {
+    "express": "^4.17.1"
   }
 }
