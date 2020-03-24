@@ -2,6 +2,7 @@ const express = require('express')
 const { v1 } = require('uuid')
 const { check, validationResult } = require('express-validator')
 const dynamoDb = require('../helpers/dynamodb')
+const sendEmail = require('../helpers/sendEmail')
 
 const router = express.Router()
 router.get('/', (req, res) => res.send({ board: 'ok' }))
@@ -10,7 +11,9 @@ router.post('/', [
   check('hashtag').isAlphanumeric(),
   check('color').isHexColor(),
   check('giveway').isIn(['NONE', 'ONE_TIME', 'EVERY']),
-  check('winnerRate').custom((winnerRate) => Number.isInteger(winnerRate) && winnerRate > 0),
+  check('winnerRate').custom((winnerRate) => {
+    return Number.isInteger(winnerRate) && winnerRate > 0
+  },
   check('email').isEmail(),
 ], async (req, res, next) => {
   const errors = validationResult(req)
@@ -38,6 +41,7 @@ router.post('/', [
 
   try {
     dynamoDb.call('put', params)
+    sendEmail(email, 'cc', 'bg')
     return res.send(params.Item)
   } catch (error) {
     return next(error.message)
