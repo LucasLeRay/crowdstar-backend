@@ -20,7 +20,7 @@ function sendEmail(to, subject, message) {
         Data: subject,
       },
     },
-    Source: 'no-replay@crowdstar.xyz', /* required */
+    Source: 'no-reply@crowdstar.xyz', /* required */
   }
 
   return SES.sendEmail(params).promise()
