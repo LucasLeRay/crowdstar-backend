@@ -11,8 +11,8 @@ require('dotenv').config()
 
 const app = express()
 
+app.use(cors())
 app.use(bodyParser.json())
-app.use(cors({ origin: /^(http|https):\/\/crowdstar.xyz$/ }))
 app.use(router)
 app.use((error, req, res) => {
   res.status(500).send({ error })
