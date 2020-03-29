@@ -1,4 +1,5 @@
 const express = require('express')
+const https = require('https')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const AWS = require('aws-sdk')
@@ -19,6 +20,8 @@ app.use((error, req, res) => {
 })
 
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`Mixing it up on port ${PORT}`)
-})
+https.createServer({
+}, app)
+  .listen(PORT, () => {
+    console.log(`Mixing it up on port ${PORT}`)
+  })
