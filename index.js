@@ -3,6 +3,7 @@ const https = require('https')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const AWS = require('aws-sdk')
+const fs = require('fs')
 const router = require('./router')
 
 AWS.config.update({
@@ -21,6 +22,8 @@ app.use((error, req, res) => {
 
 const PORT = process.env.PORT || 3000
 https.createServer({
+  key: fs.readFileSync('server.key'),
+  cert: fs.readFileSync('server.cert'),
 }, app)
   .listen(PORT, () => {
     console.log(`Mixing it up on port ${PORT}`)
