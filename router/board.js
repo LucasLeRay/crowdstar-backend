@@ -14,7 +14,6 @@ router.post(
     check('hashtag').isAlphanumeric(),
     check('color').isHexColor(),
     check('giveway').isIn(['NONE', 'ONE_TIME', 'EVERY']),
-    // eslint-disable-next-line max-len
     check('winnerRate').custom(
       (winnerRate) => Number.isInteger(winnerRate) && winnerRate >= 0,
     ),
