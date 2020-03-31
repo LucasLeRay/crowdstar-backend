@@ -2,7 +2,7 @@
 
 ## How to deploy?
 login with ssh to EC2 with the following command:  
-```ssh 34.252.88.70```  
+```ssh 34.249.80.201```  
 Include the right permission keys file.
 
 ## How to launch using PM2?
