@@ -8,6 +8,32 @@ const sendEmail = require('../helpers/sendEmail')
 const router = express.Router()
 router.get('/', (req, res) => res.send({ board: 'ok' }))
 
+router.get('/:name', async (req, res, next) => {
+	
+	const params = {
+		TableName: process.env.tableName,
+		FilterExpression: "#room_name = :room",
+		ExpressionAttributeValues: {
+		  ":room": req.params.name,
+		},
+		ExpressionAttributeNames: {
+		  "#room_name": "name"
+		}
+
+	}
+
+    try {
+		const result = await dynamoDb.call('scan', params)
+		console.log(result);
+		if (result.Count !== 1) {
+			return next("A problem occured on Items, the room may not exist");
+		}
+        res.send({result: result.Items[0]});
+    } catch (error) {
+        return next(error.message)
+    }
+});
+
 router.post(
   '/',
   [
