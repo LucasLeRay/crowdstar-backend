@@ -4,9 +4,36 @@ const { check, validationResult } = require('express-validator')
 const dynamoDb = require('../helpers/dynamodb')
 const uploadFile = require('../helpers/uploadFile')
 const sendEmail = require('../helpers/sendEmail')
+const randomCode = require('../helpers/randomCode')
 
 const router = express.Router()
 router.get('/', (req, res) => res.send({ board: 'ok' }))
+
+router.get('/:name', async (req, res, next) => {
+	
+	const params = {
+		TableName: process.env.tableName,
+		FilterExpression: "#room_name = :room",
+		ExpressionAttributeValues: {
+		  ":room": req.params.name,
+		},
+		ExpressionAttributeNames: {
+		  "#room_name": "name"
+		}
+
+	}
+
+    try {
+		const result = await dynamoDb.call('scan', params)
+		console.log(result);
+		if (result.Count !== 1) {
+			return next("A problem occured on Items, the room may not exist");
+		}
+        res.send({result: result.Items[0]});
+    } catch (error) {
+        return next(error.message)
+    }
+});
 
 router.post(
   '/',
@@ -14,7 +41,6 @@ router.post(
     check('hashtag').isAlphanumeric(),
     check('color').isHexColor(),
     check('giveway').isIn(['NONE', 'ONE_TIME', 'EVERY']),
-    // eslint-disable-next-line max-len
     check('winnerRate').custom(
       (winnerRate) => Number.isInteger(winnerRate) && winnerRate >= 0,
     ),
@@ -34,9 +60,8 @@ router.post(
       winnerRate,
       email,
     } = req.body
-    const code = (Math.random() * 10000).toString().slice(0, 4)
-    // eslint-disable-next-line max-len
-    const name = `${hashtag.toLowerCase()}-${(Math.random() * 10000).toString().slice(0, 4)}`
+    const code = randomCode()
+    const name = `${hashtag.toLowerCase()}-${randomCode()}`
     const bannerName = banner ? (await uploadFile(name, banner)) : null
 
     const params = {
