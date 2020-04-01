@@ -3,11 +3,13 @@ const cors = require('cors')
 const bodyParser = require('body-parser')
 const AWS = require('aws-sdk')
 const router = require('./router')
+require('dotenv').config()
 
 AWS.config.update({
   region: 'eu-west-1',
+  accessKeyId: process.env.accessKeyId,
+  secretAccessKey: process.env.secretAccessKey,
 })
-require('dotenv').config()
 
 const app = express()
 
