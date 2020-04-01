@@ -16,7 +16,7 @@ router.post(
     check('giveway').isIn(['NONE', 'ONE_TIME', 'EVERY']),
     // eslint-disable-next-line max-len
     check('winnerRate').custom(
-      (winnerRate) => Number.isInteger(winnerRate) && winnerRate > 0,
+      (winnerRate) => Number.isInteger(winnerRate) && winnerRate >= 0,
     ),
     check('email').isEmail(),
   ],
@@ -37,7 +37,7 @@ router.post(
     const code = (Math.random() * 10000).toString().slice(0, 4)
     // eslint-disable-next-line max-len
     const name = `${hashtag.toLowerCase()}-${(Math.random() * 10000).toString().slice(0, 4)}`
-    const bannerName = await uploadFile(name, banner)
+    const bannerName = banner ? (await uploadFile(name, banner)) : null
 
     const params = {
       TableName: process.env.tableName,
