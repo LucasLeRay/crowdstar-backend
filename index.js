@@ -34,7 +34,7 @@ io.on('connection', (socket) => {
     } else {
       boards[name] = {
         hashtag,
-        compt: 0,
+        counter: 0,
         sockets: [socket],
       }
     }
@@ -67,7 +67,7 @@ tw.on('tweet', (tweet) => {
     hashtags = tweet.entities.hashtags.map((h) => h.text)
     if (hashtags.includes(board.hashtag)) {
       for (let i = 0; i < board.sockets.length; i += 1) {
-        board.compt += 1
+        board.counter += 1
         board.sockets[i].emit('tweet', {
           tweet: {
             profilePicture: tweet.user.profile_image_url.replace('_normal', ''),
@@ -78,7 +78,7 @@ tw.on('tweet', (tweet) => {
             media: !!tweet.entities.media && tweet.entities.media[0].media_url,
             id: tweet.id_str,
           },
-          compt: board.compt,
+          counter: board.counter,
         })
       }
     }
