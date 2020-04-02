@@ -23,7 +23,7 @@ AWS.config.update({
 
 const app = express()
 const server = https.createServer(app)
-server.use(cors())
+app.use(cors())
 const io = socketIo(server)
 
 const boards = {}
