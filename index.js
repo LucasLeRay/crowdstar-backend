@@ -40,7 +40,8 @@ io.on('connection', (socket) => {
     }
     tw.track(`#${hashtag}`)
   })
-  socket.on('unregister', (name) => {
+  socket.on('disconnect', (name) => {
+    console.log('disconnect')
     // eslint-disable-next-line max-len
     boards[name].sockets = boards[name].sockets.filter((elem) => elem.id !== socket.id)
     if (!boards[name].sockets.length) {
@@ -74,8 +75,8 @@ tw.on('tweet', (tweet) => {
             userName: tweet.user.name,
             screenName: `@${tweet.user.screen_name}`,
             content: tweet.text,
-            hashtags: tweet.entities.hashtags.map((h) => h.text),
-            media: !!tweet.entities.media && tweet.entities.media[0].media_url,
+            // eslint-disable-next-line max-len
+            media: tweet.entities.media ? tweet.entities.media[0].media_url : '',
             id: tweet.id_str,
           },
           counter: board.counter,
