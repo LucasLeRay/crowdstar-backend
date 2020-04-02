@@ -2,7 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const AWS = require('aws-sdk')
-const https = require('https')
+const http = require('http')
 const socketIo = require('socket.io')
 const Twitter = require('node-tweet-stream')
 const router = require('./router')
@@ -22,8 +22,7 @@ AWS.config.update({
 })
 
 const app = express()
-const server = https.createServer(app)
-app.use(cors())
+const server = http.createServer(app)
 const io = socketIo(server)
 
 const boards = {}
@@ -86,6 +85,7 @@ tw.on('tweet', (tweet) => {
   })
 })
 
+app.use(cors())
 app.use(bodyParser.json())
 app.use(router)
 app.use((error, req, res, next) => {
