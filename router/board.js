@@ -25,7 +25,7 @@ router.get('/:name', async (req, res, next) => {
 
     try {
 		const result = await dynamoDb.call('scan', params)
-		console.log(result);
+		delete result.Items[0].code
 		if (result.Count !== 1) {
 			return next("A problem occured on Items, the room may not exist");
 		}
