@@ -40,23 +40,28 @@ io.on('connection', (socket) => {
     }
     tw.track(`#${hashtag}`)
   })
-  socket.on('disconnect', (name) => {
-    console.log('disconnect')
-    // eslint-disable-next-line max-len
-    boards[name].sockets = boards[name].sockets.filter((elem) => elem.id !== socket.id)
-    if (!boards[name].sockets.length) {
-      const { hashtag } = boards[name]
-      let usedHashtag = false
-      delete boards[name]
-      Object.keys(boards).forEach((keyBoard) => {
-        if (boards[keyBoard].hashtag === hashtag) {
-          usedHashtag = true
+  socket.on('disconnect', () => {
+    Object.keys(boards).forEach((keyBoard) => {
+      for (let i = 0; i < boards[keyBoard].sockets.length; i += 1) {
+        if (boards[keyBoard].sockets[i].id === socket.id) {
+          // eslint-disable-next-line max-len
+          boards[keyBoard].sockets = boards[keyBoard].sockets.filter((elem) => elem.id !== socket.id)
+          if (!boards[keyBoard].sockets.length) {
+            const { hashtag } = boards[keyBoard]
+            let usedHashtag = false
+            delete boards[keyBoard]
+            Object.keys(boards).forEach((keyBoardOther) => {
+              if (boards[keyBoardOther].hashtag === hashtag) {
+                usedHashtag = true
+              }
+            })
+            if (!usedHashtag) {
+              tw.untrack(`#${hashtag}`)
+            }
+          }
         }
-      })
-      if (!usedHashtag) {
-        tw.untrack(`#${hashtag}`)
       }
-    }
+    })
   })
 })
 
