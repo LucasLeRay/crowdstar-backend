@@ -41,9 +41,7 @@ io.on('connection', (socket) => {
     tw.track(`#${hashtag}`)
   })
   socket.on('disconnect', () => {
-    console.log(boards)
     Object.keys(boards).forEach((keyBoard) => {
-      console.log(keyBoard)
       for (let i = 0; i < boards[keyBoard].sockets.length; i += 1) {
         if (boards[keyBoard].sockets[i].id === socket.id) {
           // eslint-disable-next-line max-len
