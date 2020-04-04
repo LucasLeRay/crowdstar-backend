@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk')
 
-function sendEmail(to, subject, message) {
+function sendEmail(to, subject, messageText, messageHTML) {
   const SES = new AWS.SES({ apiVersion: '2010-12-01' })
   const params = {
     Destination: {
@@ -12,7 +12,10 @@ function sendEmail(to, subject, message) {
       Body: {
         Text: {
           Charset: 'UTF-8',
-          Data: message,
+          Data: messageText,
+        },
+        Html: {
+          Data: messageHTML,
         },
       },
       Subject: {

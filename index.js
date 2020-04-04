@@ -15,6 +15,8 @@ const tw = new Twitter({
   token_secret: process.env.TwitterTokenSecret,
 })
 
+tw.setMaxListeners(500)
+
 AWS.config.update({
   region: 'eu-west-1',
   accessKeyId: process.env.accessKeyId,
@@ -23,17 +25,25 @@ AWS.config.update({
 
 const app = express()
 const server = http.createServer(app)
-const io = socketIo(server)
+const io = socketIo(server, {
+  pingTimeout: 86400000,
+})
 
 const boards = {}
 
 io.on('connection', (socket) => {
-  socket.on('register', ({ name, hashtag }) => {
+  socket.on('register', ({
+    name, hashtag, giveway, winnerRate,
+  }) => {
     if (boards[name]) {
       boards[name].sockets.push(socket)
     } else {
       boards[name] = {
         hashtag,
+        giveway: winnerRate === 0 ? 'NONE' : giveway,
+        winnerRate,
+        winnerIndex: ['EVERY', 'AT'].includes(giveway)
+          && Math.floor(Math.random() * winnerRate),
         counter: 0,
         sockets: [socket],
       }
@@ -59,6 +69,7 @@ io.on('connection', (socket) => {
               tw.untrack(`#${hashtag}`)
             }
           }
+          return
         }
       }
     })
@@ -72,8 +83,21 @@ tw.on('tweet', (tweet) => {
     board = boards[keyBoard]
     hashtags = tweet.entities.hashtags.map((h) => h.text)
     if (hashtags.includes(board.hashtag)) {
+      if ((board.giveway === 'EVERY'
+        || (board.giveway === 'AT' && board.counter < board.winnerRate))
+        && board.counter % board.winnerRate === board.winnerIndex) {
+        board.winner = {
+          profilePicture: tweet.user.profile_image_url.replace('_normal', ''),
+          userName: tweet.user.name,
+          screenName: `@${tweet.user.screen_name}`,
+          content: tweet.text,
+          // eslint-disable-next-line max-len
+          media: tweet.entities.media ? tweet.entities.media[0].media_url : '',
+          id: tweet.id_str,
+        }
+      }
+      board.counter += 1
       for (let i = 0; i < board.sockets.length; i += 1) {
-        board.counter += 1
         board.sockets[i].emit('tweet', {
           tweet: {
             profilePicture: tweet.user.profile_image_url.replace('_normal', ''),
@@ -86,6 +110,11 @@ tw.on('tweet', (tweet) => {
           },
           counter: board.counter,
         })
+        if ((board.giveway === 'EVERY'
+        || (board.giveway === 'AT' && board.counter < board.winnerRate))
+        && board.counter % board.winnerRate === 0 && board.counter > 0) {
+          board.sockets[i].emit('winner', board.winner)
+        }
       }
     }
   })
@@ -98,7 +127,7 @@ app.use((error, req, res, next) => {
   res.status(500).send({ error })
 })
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3001
 server.listen(PORT, () => {
   console.log(`Mixing it up on port ${PORT}`)
 })

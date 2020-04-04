@@ -1,0 +1,7 @@
+Your room : {{name}} is ready
+
+your new token is {{token}}
+
+Give better interaction with your audience using the #{{hashtag}}
+
+Thanks for using CrowdStar ❤️
