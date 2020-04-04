@@ -15,8 +15,8 @@ function sendEmail(to, subject, messageText, messageHTML) {
           Data: messageText,
         },
         Html: {
-            Data: messageHTML
-          }
+          Data: messageHTML,
+        },
       },
       Subject: {
         Charset: 'UTF-8',
