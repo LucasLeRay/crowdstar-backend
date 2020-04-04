@@ -77,18 +77,18 @@ router.post(
     try {
       await dynamoDb.call("put", params);
       fs.readFile(
-        "./template/emailtemplate.html",
+        __dirname + "/../template/emailtemplate.html",
         async (err, emailHtmlTemplate) => {
           if (err) {
             console.log("Unable to load HTML Template");
-            throw err;
+            next(err);
           }
           fs.readFile(
-            "./template/emailtemplate.txt",
+            __dirname + "/../template/emailtemplate.txt",
             async (err, emailTextTemplate) => {
               if (err) {
                 console.log("Unable to load TEXT Template");
-                throw err;
+                next(err);
               }
 
               let emailData = {
@@ -100,13 +100,11 @@ router.post(
                 emailTextTemplate.toString()
               );
               let bodyText = templateText(emailData);
-              console.log(bodyText);
 
               let templateHtml = Handlebars.compile(
                 emailHtmlTemplate.toString()
               );
               let bodyHtml = templateHtml(emailData);
-              console.log(bodyHtml);
               await sendEmail(
                 email,
                 "Your board has been successfully created!",
@@ -154,7 +152,6 @@ router.put(
 
     try {
       const item = await dynamoDb.call("update", params);
-      console.log("items ", item);
       return res.send(item);
     } catch (error) {
       return next(error.message);
