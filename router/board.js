@@ -9,6 +9,9 @@ const randomCode = require("../helpers/randomCode");
 const fs = require("fs");
 const Handlebars = require("handlebars");
 
+const util = require("util");
+const readFile = util.promisify(fs.readFile);
+
 const router = express.Router();
 router.get("/", (req, res) => res.send({ board: "ok" }));
 
@@ -76,47 +79,33 @@ router.post(
 
     try {
       await dynamoDb.call("put", params);
-      fs.readFile(
-        __dirname + "/../template/emailtemplate.html",
-        async (err, emailHtmlTemplate) => {
-          if (err) {
-            console.log("Unable to load HTML Template");
-            next(err);
-          }
-          fs.readFile(
-            __dirname + "/../template/emailtemplate.txt",
-            async (err, emailTextTemplate) => {
-              if (err) {
-                console.log("Unable to load TEXT Template");
-                next(err);
-              }
+ 
+      const fileHTML = readFile("../template/emailtemplate.html");
+      const fileText = readFile("../template/emailtemplate.txt");
+      const emailData = {
+        name,
+        hashtag
+      };
 
-              let emailData = {
-                name,
-                hashtag
-              };
+      Promise.all([fileHTML, fileText])
+        .then(async values => {
+          const templateHtml = Handlebars.compile(values[0].toString("utf8"));
+          const bodyHtml = templateHtml(emailData);
 
-              let templateText = Handlebars.compile(
-                emailTextTemplate.toString()
-              );
-              let bodyText = templateText(emailData);
+          const templateText = Handlebars.compile(values[1].toString("utf8"));
+          const bodyText = templateText(emailData);
 
-              let templateHtml = Handlebars.compile(
-                emailHtmlTemplate.toString()
-              );
-              let bodyHtml = templateHtml(emailData);
-              await sendEmail(
-                email,
-                "Your board has been successfully created!",
-                bodyText,
-                bodyHtml
-              );
-            }
+          await sendEmail(
+            email,
+            "Your board has been successfully created!",
+            bodyText,
+            bodyHtml
           );
-        }
-      );
-      // eslint-disable-next-line max-len
-      return res.send(params.Item);
+          return res.send(params.Item);
+        })
+        .catch(err => {
+          return next(err.message);
+        });
     } catch (error) {
       return next(error.message);
     }
