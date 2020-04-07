@@ -80,8 +80,8 @@ router.post(
     try {
       await dynamoDb.call("put", params);
  
-      const fileHTML = readFile(__dirname + "/../template/emailtemplate.html");
-      const fileText = readFile(__dirname + "/../template/emailtemplate.txt");
+      const fileHTML = readFile("../template/emailtemplate.html");
+      const fileText = readFile("../template/emailtemplate.txt");
       const emailData = {
         name,
         hashtag
