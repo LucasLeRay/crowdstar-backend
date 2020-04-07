@@ -1,65 +1,67 @@
-const express = require("express");
-const { v1 } = require("uuid");
-const { check, validationResult } = require("express-validator");
-const dynamoDb = require("../helpers/dynamodb");
-const uploadFile = require("../helpers/uploadFile");
-const sendEmail = require("../helpers/sendEmail");
-const randomCode = require("../helpers/randomCode");
+const express = require('express')
+const { v1 } = require('uuid')
+const { check, validationResult } = require('express-validator')
+const fs = require('fs')
+const Handlebars = require('handlebars')
+const util = require('util')
+const dynamoDb = require('../helpers/dynamodb')
+const uploadFile = require('../helpers/uploadFile')
+const sendEmail = require('../helpers/sendEmail')
+const randomCode = require('../helpers/randomCode')
 
-const fs = require("fs");
-const Handlebars = require("handlebars");
 
-const util = require("util");
-const readFile = util.promisify(fs.readFile);
+const readFile = util.promisify(fs.readFile)
 
-const router = express.Router();
-router.get("/", (req, res) => res.send({ board: "ok" }));
+const router = express.Router()
+router.get('/', (req, res) => res.send({ board: 'ok' }))
 
-router.get("/:name", async (req, res, next) => {
+router.get('/:name', async (req, res, next) => {
   const params = {
     TableName: process.env.tableName,
-    FilterExpression: "#room_name = :room",
+    FilterExpression: '#room_name = :room',
     ExpressionAttributeValues: {
-      ":room": req.params.name
+      ':room': req.params.name,
     },
     ExpressionAttributeNames: {
-      "#room_name": "name"
-    }
-  };
+      '#room_name': 'name',
+    },
+  }
 
   try {
-    const result = await dynamoDb.call("scan", params);
-    delete result.Items[0].code;
+    const result = await dynamoDb.call('scan', params)
+    delete result.Items[0].code
     if (result.Count !== 1) {
-      return next("A problem occured on Items, the room may not exist");
+      return next('A problem occured on Items, the room may not exist')
     }
-    res.send({ result: result.Items[0] });
+    res.send({ result: result.Items[0] })
   } catch (error) {
-    return next(error.message);
+    return next(error.message)
   }
-});
+})
 
 router.post(
-  "/",
+  '/',
   [
-    check("hashtag").isAlphanumeric(),
-    check("color").isHexColor(),
-    check("giveway").isIn(["NONE", "ONE_TIME", "EVERY"]),
-    check("winnerRate").custom(
-      winnerRate => Number.isInteger(winnerRate) && winnerRate >= 0
+    check('hashtag').isAlphanumeric(),
+    check('color').isHexColor(),
+    check('giveway').isIn(['NONE', 'ONE_TIME', 'EVERY']),
+    check('winnerRate').custom(
+      (winnerRate) => Number.isInteger(winnerRate) && winnerRate >= 0,
     ),
-    check("email").isEmail()
+    check('email').isEmail(),
   ],
   async (req, res, next) => {
-    const errors = validationResult(req);
+    const errors = validationResult(req)
     if (!errors.isEmpty()) {
-      const { msg, param } = errors.array()[0];
-      return next(`${param}: ${msg}`);
+      const { msg, param } = errors.array()[0]
+      return next(`${param}: ${msg}`)
     }
-    const { hashtag, color, banner, giveway, winnerRate, email } = req.body;
-    const code = randomCode();
-    const name = `${hashtag.toLowerCase()}-${randomCode()}`;
-    const bannerName = banner ? await uploadFile(name, banner) : null;
+    const {
+      hashtag, color, banner, giveway, winnerRate, email,
+    } = req.body
+    const code = randomCode()
+    const name = `${hashtag.toLowerCase()}-${randomCode()}`
+    const bannerName = banner ? await uploadFile(name, banner) : null
 
     const params = {
       TableName: process.env.tableName,
@@ -73,79 +75,77 @@ router.post(
         winnerRate,
         email,
         code,
-        date: Date()
-      }
-    };
+        date: Date(),
+      },
+    }
 
     try {
-      await dynamoDb.call("put", params);
- 
-      const fileHTML = readFile("../template/emailtemplate.html");
-      const fileText = readFile("../template/emailtemplate.txt");
+      await dynamoDb.call('put', params)
+
+      const fileHTML = readFile(`${process.cwd()}/template/emailTemplate.html`)
+      const fileText = readFile(`${process.cwd()}/template/emailTemplate.txt`)
       const emailData = {
         name,
-        hashtag
-      };
+        hashtag,
+      }
 
       Promise.all([fileHTML, fileText])
-        .then(async values => {
-          const templateHtml = Handlebars.compile(values[0].toString("utf8"));
-          const bodyHtml = templateHtml(emailData);
+        .then(async (values) => {
+          const templateHtml = Handlebars.compile(values[0].toString('utf8'))
+          const bodyHtml = templateHtml(emailData)
 
-          const templateText = Handlebars.compile(values[1].toString("utf8"));
-          const bodyText = templateText(emailData);
+          const templateText = Handlebars.compile(values[1].toString('utf8'))
+          const bodyText = templateText(emailData)
 
           await sendEmail(
             email,
-            "Your board has been successfully created!",
+            'Your board has been successfully created!',
             bodyText,
-            bodyHtml
-          );
-          return res.send(params.Item);
+            bodyHtml,
+          )
+          return res.send(params.Item)
         })
-        .catch(err => {
-          return next(err.message);
-        });
+        .catch((err) => next(err.message))
     } catch (error) {
-      return next(error.message);
+      return next(error.message)
     }
-  }
-);
+  },
+)
 
 router.put(
-  "/",
-  [check("color").isHexColor(), check("banner").isURL()],
+  '/',
+  [check('color').isHexColor(), check('banner').isURL()],
   async (req, res, next) => {
-    const errors = validationResult(req);
+    const errors = validationResult(req)
     if (!errors.isEmpty()) {
-      const { msg, param } = errors.array()[0];
-      return next(`${param}: ${msg}`);
+      const { msg, param } = errors.array()[0]
+      return next(`${param}: ${msg}`)
     }
 
     const params = {
       TableName: process.env.tableName,
       Key: {
         boardId: req.body.boardId,
-        name: req.body.name
+        name: req.body.name,
       },
-      UpdateExpression: "set color = :color, banner = :banner",
-      ConditionExpression: "code = :code",
+      UpdateExpression: 'set color = :color, banner = :banner',
+      ConditionExpression: 'code = :code',
 
       ExpressionAttributeValues: {
-        ":color": req.body.color,
-        ":banner": req.body.banner,
-        ":code": req.body.code
+        ':color': req.body.color,
+        ':banner': req.body.banner,
+        ':code': req.body.code,
       },
-      ReturnValues: "UPDATED_NEW"
-    };
+      ReturnValues: 'UPDATED_NEW',
+    }
 
     try {
-      const item = await dynamoDb.call("update", params);
-      return res.send(item);
+      const item = await dynamoDb.call('update', params)
+      return res.send(item)
     } catch (error) {
-      return next(error.message);
+      return next(error.message)
     }
-  }
-);
+  },
+)
 
-module.exports = router;
+module.exports = router
