@@ -9,7 +9,6 @@ const uploadFile = require('../helpers/uploadFile')
 const sendEmail = require('../helpers/sendEmail')
 const randomCode = require('../helpers/randomCode')
 
-
 const readFile = util.promisify(fs.readFile)
 
 const router = express.Router()
@@ -76,6 +75,7 @@ router.post(
         email,
         code,
         date: Date(),
+        tier: 'NONE',
       },
     }
 
