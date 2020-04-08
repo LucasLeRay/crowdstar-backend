@@ -1,7 +1,7 @@
 const dynamoDb = require("../helpers/dynamodb");
 const cron = require("node-cron");
 
-cron.schedule("0 * */1 * * *", async () => {
+cron.schedule("0 0 */1 * * *", async () => {
 
   let minDate6 = new Date();
   let minDate12 = new Date();
