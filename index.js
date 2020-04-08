@@ -7,6 +7,7 @@ const socketIo = require('socket.io')
 const Twitter = require('node-tweet-stream')
 const router = require('./router')
 require('dotenv').config()
+require('./helpers/cron')
 
 const tw = new Twitter({
   consumer_key: process.env.TwitterConsumerKey,
