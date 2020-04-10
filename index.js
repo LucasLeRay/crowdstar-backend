@@ -80,27 +80,15 @@ io.on('connection', (socket) => {
 let hashtags
 let board
 tw.on('tweet', (tweet) => {
-  Object.keys(boards).forEach((keyBoard) => {
-    board = boards[keyBoard]
-    hashtags = tweet.entities.hashtags.map((h) => h.text)
-    if (hashtags.includes(board.hashtag)) {
-      if ((board.giveway === 'EVERY'
+  if (!tweet.retweeted_status) {
+    Object.keys(boards).forEach((keyBoard) => {
+      board = boards[keyBoard]
+      hashtags = tweet.entities.hashtags.map((h) => h.text)
+      if (hashtags.includes(board.hashtag)) {
+        if ((board.giveway === 'EVERY'
         || (board.giveway === 'AT' && board.counter < board.winnerRate))
         && board.counter % board.winnerRate === board.winnerIndex) {
-        board.winner = {
-          profilePicture: tweet.user.profile_image_url.replace('_normal', ''),
-          userName: tweet.user.name,
-          screenName: `@${tweet.user.screen_name}`,
-          content: tweet.text,
-          // eslint-disable-next-line max-len
-          media: tweet.entities.media ? tweet.entities.media[0].media_url : '',
-          id: tweet.id_str,
-        }
-      }
-      board.counter += 1
-      for (let i = 0; i < board.sockets.length; i += 1) {
-        board.sockets[i].emit('tweet', {
-          tweet: {
+          board.winner = {
             profilePicture: tweet.user.profile_image_url.replace('_normal', ''),
             userName: tweet.user.name,
             screenName: `@${tweet.user.screen_name}`,
@@ -108,22 +96,38 @@ tw.on('tweet', (tweet) => {
             // eslint-disable-next-line max-len
             media: tweet.entities.media ? tweet.entities.media[0].media_url : '',
             id: tweet.id_str,
-          },
-          counter: board.counter,
-        })
-        if ((board.giveway === 'EVERY'
+          }
+        }
+        board.counter += 1
+        for (let i = 0; i < board.sockets.length; i += 1) {
+          board.sockets[i].emit('tweet', {
+            tweet: {
+              // eslint-disable-next-line max-len
+              profilePicture: tweet.user.profile_image_url.replace('_normal', ''),
+              userName: tweet.user.name,
+              screenName: `@${tweet.user.screen_name}`,
+              content: tweet.text,
+              // eslint-disable-next-line max-len
+              media: tweet.entities.media ? tweet.entities.media[0].media_url : '',
+              id: tweet.id_str,
+            },
+            counter: board.counter,
+          })
+          if ((board.giveway === 'EVERY'
         || (board.giveway === 'AT' && board.counter < board.winnerRate))
         && board.counter % board.winnerRate === 0 && board.counter > 0) {
-          board.sockets[i].emit('winner', board.winner)
+            board.sockets[i].emit('winner', board.winner)
+          }
         }
       }
-    }
-  })
+    })
+  }
 })
 
 app.use(cors())
 app.use(bodyParser.json())
 app.use(router)
+// eslint-disable-next-line no-unused-vars
 app.use((error, req, res, next) => {
   res.status(500).send({ error })
 })
