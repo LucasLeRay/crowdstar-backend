@@ -1,0 +1,3 @@
+Thw winner for the #{{hashtag}} on the wall {{wall}} is {{winner}}.
+
+Thanks for using CrowdStar ❤️
