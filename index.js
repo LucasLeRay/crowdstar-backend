@@ -6,6 +6,8 @@ const http = require('http')
 const socketIo = require('socket.io')
 const Twitter = require('node-tweet-stream')
 const router = require('./router')
+const onTweet = require('./helpers/onTweet')
+const { newBoard, onDisconnect } = require('./helpers/onSocket')
 require('dotenv').config()
 require('./helpers/cron')
 
@@ -34,98 +36,33 @@ const boards = {}
 
 io.on('connection', (socket) => {
   socket.on('register', ({
-    name, hashtag, giveway, winnerRate,
+    name, hashtag, ...params
   }) => {
     if (boards[name]) {
       boards[name].sockets.push(socket)
     } else {
-      boards[name] = {
-        hashtag,
-        giveway: winnerRate === 0 ? 'NONE' : giveway,
-        winnerRate,
-        winnerIndex: ['EVERY', 'AT'].includes(giveway)
-          && Math.floor(Math.random() * winnerRate),
-        counter: 0,
-        sockets: [socket],
-      }
+      boards[name] = newBoard(socket, { name, hashtag, ...params })
+      tw.track(`#${hashtag}`)
     }
-    tw.track(`#${hashtag}`)
   })
   socket.on('disconnect', () => {
-    Object.keys(boards).forEach((keyBoard) => {
-      for (let i = 0; i < boards[keyBoard].sockets.length; i += 1) {
-        if (boards[keyBoard].sockets[i].id === socket.id) {
-          // eslint-disable-next-line max-len
-          boards[keyBoard].sockets = boards[keyBoard].sockets.filter((elem) => elem.id !== socket.id)
-          if (!boards[keyBoard].sockets.length) {
-            const { hashtag } = boards[keyBoard]
-            let usedHashtag = false
-            delete boards[keyBoard]
-            Object.keys(boards).forEach((keyBoardOther) => {
-              if (boards[keyBoardOther].hashtag === hashtag) {
-                usedHashtag = true
-              }
-            })
-            if (!usedHashtag) {
-              tw.untrack(`#${hashtag}`)
-            }
-          }
-          return
-        }
-      }
-    })
+    const toRemove = onDisconnect(boards, socket, tw)
+    if (toRemove) delete boards[toRemove]
   })
 })
 
-let hashtags
-let board
 tw.on('tweet', (tweet) => {
   if (!tweet.retweeted_status) {
-    Object.keys(boards).forEach((keyBoard) => {
-      board = boards[keyBoard]
-      hashtags = tweet.entities.hashtags.map((h) => h.text)
-      if (hashtags.includes(board.hashtag)) {
-        if ((board.giveway === 'EVERY'
-        || (board.giveway === 'AT' && board.counter < board.winnerRate))
-        && board.counter % board.winnerRate === board.winnerIndex) {
-          board.winner = {
-            profilePicture: tweet.user.profile_image_url.replace('_normal', ''),
-            userName: tweet.user.name,
-            screenName: `@${tweet.user.screen_name}`,
-            content: tweet.text,
-            // eslint-disable-next-line max-len
-            media: tweet.entities.media ? tweet.entities.media[0].media_url : '',
-            id: tweet.id_str,
-          }
-        }
-        board.counter += 1
-        for (let i = 0; i < board.sockets.length; i += 1) {
-          board.sockets[i].emit('tweet', {
-            tweet: {
-              // eslint-disable-next-line max-len
-              profilePicture: tweet.user.profile_image_url.replace('_normal', ''),
-              userName: tweet.user.name,
-              screenName: `@${tweet.user.screen_name}`,
-              content: tweet.text,
-              // eslint-disable-next-line max-len
-              media: tweet.entities.media ? tweet.entities.media[0].media_url : '',
-              id: tweet.id_str,
-            },
-            counter: board.counter,
-          })
-          if ((board.giveway === 'EVERY'
-        || (board.giveway === 'AT' && board.counter < board.winnerRate))
-        && board.counter % board.winnerRate === 0 && board.counter > 0) {
-            board.sockets[i].emit('winner', board.winner)
-          }
-        }
-      }
-    })
+    const toRemove = onTweet({ tweet, boards })
+    if (toRemove){
+        delete boards[toRemove]
+    } 
   }
 })
 
 app.use(cors())
-app.use(bodyParser.json())
+app.use(bodyParser.json({ limit: '50mb' }))
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }))
 app.use(router)
 // eslint-disable-next-line no-unused-vars
 app.use((error, req, res, next) => {
