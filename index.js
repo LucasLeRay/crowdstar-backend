@@ -53,7 +53,10 @@ io.on('connection', (socket) => {
 
 tw.on('tweet', (tweet) => {
   if (!tweet.retweeted_status) {
-    onTweet({ tweet, boards })
+    const toRemove = onTweet({ tweet, boards })
+    if (toRemove){
+        delete boards[toRemove]
+    } 
   }
 })
 

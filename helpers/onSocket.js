@@ -1,5 +1,5 @@
 function newBoard(socket, {
-  hashtag, giveway, winnerRate,
+  hashtag, giveway, winnerRate, tier, email, name
 }) {
   return {
     hashtag,
@@ -9,6 +9,9 @@ function newBoard(socket, {
       && Math.floor(Math.random() * winnerRate),
     counter: 0,
     sockets: [socket],
+    tier,
+    email,
+    name
   }
 }
 

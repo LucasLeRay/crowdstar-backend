@@ -1,0 +1,5 @@
+Your wall {{name}} reached the maximum interaction.
+
+The wall is now deleted.
+
+Thanks for using CrowdStar ❤️
