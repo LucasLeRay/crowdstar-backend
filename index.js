@@ -36,14 +36,16 @@ const boards = {}
 
 io.on('connection', (socket) => {
   socket.on('register', ({
-    name, hashtag, ...params
+    name, hashtag, isAvailable, ...params
   }) => {
-    if (boards[name]) {
-      boards[name].sockets.push(socket)
-    } else {
-      boards[name] = newBoard(socket, { name, hashtag, ...params })
-      tw.track(`#${hashtag}`)
-    }
+      if (isAvailable) {
+        if (boards[name]) {
+          boards[name].sockets.push(socket)
+        } else {
+          boards[name] = newBoard(socket, { name, hashtag, ...params })
+          tw.track(`#${hashtag}`)
+        }
+      }
   })
   socket.on('disconnect', () => {
     const toRemove = onDisconnect(boards, socket, tw)

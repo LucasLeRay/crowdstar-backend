@@ -76,6 +76,7 @@ router.post(
         code,
         date: Date(),
         tier: 'NONE',
+        isAvailable: true
       },
     }
 
