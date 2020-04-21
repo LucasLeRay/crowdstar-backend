@@ -34,8 +34,19 @@ cron.schedule('0 0 */1 * * *', async () => {
           boardId: item.boardId,
           name: item.name,
         },
+        UpdateExpression: 'set isAvailable = :isAvailable',
+
+        ExpressionAttributeValues: {
+          ':isAvailable': false,
+        },
+        ReturnValues: 'UPDATED_NEW',
       }
-      return dynamoDb.call('delete', paramsDeletion)
+
+      try {
+        await dynamoDb.call('update', paramsDeletion)
+      } catch (error) {
+        console.log('Error while update table', error)
+      }
     })
   } catch (error) {
     console.log('Cron error ', error)

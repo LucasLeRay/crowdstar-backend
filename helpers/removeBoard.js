@@ -24,16 +24,21 @@ const removeBoard = async (email, boardName) => {
       "#room_name": "name",
     },
   };
-
   try {
     const result = await dynamoDb.call("scan", params);
     result.Items.map(async (item) => {
-      const paramsDeletion = {
+      const params = {
         TableName: process.env.tableName,
         Key: {
           boardId: item.boardId,
           name: item.name,
         },
+        UpdateExpression: "set isAvailable = :isAvailable",
+
+        ExpressionAttributeValues: {
+          ":isAvailable": false,
+        },
+        ReturnValues: "UPDATED_NEW",
       };
 
       const fileHTML = readFile(
@@ -61,7 +66,11 @@ const removeBoard = async (email, boardName) => {
         );
       });
 
-      return dynamoDb.call("delete", paramsDeletion);
+      try {
+        await dynamoDb.call("update", params);
+      } catch (error) {
+        console.log("Error while update table", error);
+      }
     });
   } catch (error) {
     console.log("Cron error ", error);
