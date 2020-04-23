@@ -32,7 +32,7 @@ router.get('/:name', async (req, res, next) => {
     if (result.Count !== 1) {
       return next('A problem occured on Items, the room may not exist')
     }
-    res.send({ result: result.Items[0] })
+    return res.send({ result: result.Items[0] })
   } catch (error) {
     return next(error.message)
   }
@@ -76,7 +76,7 @@ router.post(
         code,
         date: Date(),
         tier: 'NONE',
-        isAvailable: true
+        isAvailable: true,
       },
     }
 

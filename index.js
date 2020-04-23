@@ -38,14 +38,14 @@ io.on('connection', (socket) => {
   socket.on('register', ({
     name, hashtag, isAvailable, ...params
   }) => {
-      if (isAvailable) {
-        if (boards[name]) {
-          boards[name].sockets.push(socket)
-        } else {
-          boards[name] = newBoard(socket, { name, hashtag, ...params })
-          tw.track(`#${hashtag}`)
-        }
+    if (isAvailable) {
+      if (boards[name]) {
+        boards[name].sockets.push(socket)
+      } else {
+        boards[name] = newBoard(socket, { name, hashtag, ...params })
+        tw.track(`#${hashtag}`)
       }
+    }
   })
   socket.on('disconnect', () => {
     const toRemove = onDisconnect(boards, socket, tw)
@@ -56,9 +56,9 @@ io.on('connection', (socket) => {
 tw.on('tweet', (tweet) => {
   if (!tweet.retweeted_status) {
     const toRemove = onTweet({ tweet, boards })
-    if (toRemove){
-        delete boards[toRemove]
-    } 
+    if (toRemove) {
+      delete boards[toRemove]
+    }
   }
 })
 

@@ -1,9 +1,26 @@
 const express = require('express')
 const { check, validationResult } = require('express-validator')
-const stripePackage = require('stripe')
+const stripe = require('stripe')(process.env.prodStripeSecretKey)
 const dynamoDb = require('../helpers/dynamodb')
 
 const router = express.Router()
+
+async function getBoardFromName(name) {
+  const params = {
+    TableName: process.env.tableName,
+    FilterExpression: '#room_name = :room',
+    ExpressionAttributeValues: {
+      ':room': name,
+    },
+    ExpressionAttributeNames: {
+      '#room_name': 'name',
+    },
+  }
+
+  const result = await dynamoDb.call('scan', params)
+  return result.Items[0]
+}
+
 router.post(
   '/',
   [
@@ -16,20 +33,18 @@ router.post(
       return next(`${param}: ${msg}`)
     }
     const {
-      source, tier, boardId, name, email,
+      tier, name, sessionId,
     } = req.body
 
     try {
-      if (['STANDARD', 'PREMIUM'].includes(tier)) {
-        const stripe = stripePackage(process.env.prodStripeSecretKey)
-        await stripe.charges.create({
-          source,
-          amount: tier === 'PREMIUM' ? 80 * 100 : 50 * 100,
-          description: `CrowdStar ${tier.toLowerCase()} wall.`,
-          currency: 'usd',
-          receipt_email: email,
-        })
+      if (!['STANDARD', 'PREMIUM', 'FREE'].includes(tier)) {
+        return next('Invalid tier')
       }
+      if (['STANDARD', 'PREMIUM'].includes(tier) && !sessionId) {
+        return next('Invalid payment')
+      }
+
+      const { boardId } = await getBoardFromName(name)
 
       const params = {
         TableName: process.env.tableName,
@@ -38,11 +53,9 @@ router.post(
           name,
         },
         UpdateExpression: 'set tier = :tier',
-        ConditionExpression: 'tier = :none',
 
         ExpressionAttributeValues: {
           ':tier': tier,
-          ':none': 'NONE',
         },
         ReturnValues: 'UPDATED_NEW',
       }
@@ -54,36 +67,55 @@ router.post(
   },
 )
 
-router.put(
-  '/',
-  [check('color').isHexColor(), check('banner').isURL()],
+router.post(
+  '/session/standard',
   async (req, res, next) => {
-    const errors = validationResult(req)
-    if (!errors.isEmpty()) {
-      const { msg, param } = errors.array()[0]
-      return next(`${param}: ${msg}`)
-    }
-
-    const params = {
-      TableName: process.env.tableName,
-      Key: {
-        boardId: req.body.boardId,
-        name: req.body.name,
-      },
-      UpdateExpression: 'set color = :color, banner = :banner',
-      ConditionExpression: 'code = :code',
-
-      ExpressionAttributeValues: {
-        ':color': req.body.color,
-        ':banner': req.body.banner,
-        ':code': req.body.code,
-      },
-      ReturnValues: 'UPDATED_NEW',
-    }
+    const { name } = req.body
 
     try {
-      const item = await dynamoDb.call('update', params)
-      return res.send(item)
+      const { id } = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          name: 'Standard Wall',
+          description: 'A Tweet Wall suited for your event.',
+          images: ['https://crowdstar.xyz/demo.png'],
+          amount: 50 * 100,
+          currency: 'usd',
+          quantity: 1,
+        }],
+        // eslint-disable-next-line max-len
+        success_url: `https://crowdstar.xyz/billing/${name}/?tier=STANDARD&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `https://crowdstar.xyz/board/${name}/`,
+      })
+      return res.send({ id })
+    } catch (error) {
+      return next(error.message)
+    }
+  },
+)
+
+router.post(
+  '/session/premium',
+  async (req, res, next) => {
+    const { name } = req.body
+
+    try {
+      const { id } = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          name: 'Premium Wall',
+          // eslint-disable-next-line max-len
+          description: 'A Tweet Wall suited for your event. (+$30 discount next time!)',
+          images: ['https://crowdstar.xyz/demo.png'],
+          amount: 80 * 100,
+          currency: 'usd',
+          quantity: 1,
+        }],
+        // eslint-disable-next-line max-len
+        success_url: `https://crowdstar.xyz/billing/${name}/?tier=PREMIUM&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `https://crowdstar.xyz/board/${name}/`,
+      })
+      return res.send({ id })
     } catch (error) {
       return next(error.message)
     }
