@@ -1,5 +1,7 @@
 const express = require('express')
 const { check, validationResult } = require('express-validator')
+require('dotenv').config()
+
 const stripe = require('stripe')(process.env.prodStripeSecretKey)
 const dynamoDb = require('../helpers/dynamodb')
 
